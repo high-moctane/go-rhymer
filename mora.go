@@ -1,64 +1,133 @@
 package rhymer
 
+import markov "github.com/high-moctane/go-markov_chain_Japanese"
+
 var (
-	mora = map[string][]string{
-		"ア": {"", "a"}, "イ": {"", "i"}, "ウ": {"", "u"}, "エ": {"", "e"}, "オ": {"", "o"},
-		"カ": {"k", "a"}, "キ": {"k", "i"}, "ク": {"k", "u"}, "ケ": {"k", "e"}, "コ": {"k", "o"},
-		"ガ": {"g", "a"}, "ギ": {"g", "i"}, "グ": {"g", "u"}, "ゲ": {"g", "e"}, "ゴ": {"g", "o"},
-		"サ": {"s", "a"}, "シ": {"s", "i"}, "ス": {"s", "u"}, "セ": {"s", "e"}, "ソ": {"s", "o"},
-		"ザ": {"z", "a"}, "ジ": {"j", "i"}, "ズ": {"z", "u"}, "ゼ": {"z", "e"}, "ゾ": {"z", "o"},
-		"タ": {"t", "a"}, "チ": {"ch", "i"}, "ツ": {"ts", "u"}, "テ": {"t", "e"}, "ト": {"t", "o"},
-		"ダ": {"d", "a"}, "ヂ": {"j", "i"}, "ヅ": {"z", "u"}, "デ": {"d", "e"}, "ド": {"d", "o"},
-		"ナ": {"n", "a"}, "ニ": {"n", "i"}, "ヌ": {"n", "u"}, "ネ": {"n", "e"}, "ノ": {"n", "o"},
-		"ハ": {"h", "a"}, "ヒ": {"h", "i"}, "フ": {"f", "u"}, "ヘ": {"h", "e"}, "ホ": {"h", "o"},
-		"バ": {"b", "a"}, "ビ": {"b", "i"}, "ブ": {"b", "u"}, "ベ": {"b", "e"}, "ボ": {"b", "o"},
-		"パ": {"p", "a"}, "ピ": {"p", "i"}, "プ": {"p", "u"}, "ペ": {"p", "e"}, "ポ": {"p", "o"},
-		"マ": {"m", "a"}, "ミ": {"m", "i"}, "ム": {"m", "u"}, "メ": {"m", "e"}, "モ": {"m", "o"},
-		"ヤ": {"y", "a"}, "ユ": {"y", "u"}, "ヨ": {"y", "o"},
-		"ラ": {"r", "a"}, "リ": {"r", "i"}, "ル": {"r", "u"}, "レ": {"r", "e"}, "ロ": {"r", "o"},
-		"ワ": {"w", "a"}, "ヲ": {"", "o"}, "ン": {"*n*", "*n*"},
-
-		"キャ": {"ky", "a"}, "キュ": {"ky", "u"}, "キョ": {"ky", "o"},
-		"シャ": {"sh", "a"}, "シュ": {"sh", "u"}, "ショ": {"sh", "o"},
-		"チャ": {"ch", "a"}, "チュ": {"ch", "u"}, "チョ": {"ch", "o"},
-		"ニャ": {"ny", "a"}, "ニュ": {"ny", "u"}, "ニョ": {"ny", "o"},
-		"ヒャ": {"hy", "a"}, "ヒュ": {"hy", "u"}, "ヒョ": {"hy", "o"},
-		"ミャ": {"my", "a"}, "ミュ": {"my", "u"}, "ミョ": {"my", "o"},
-		"リャ": {"ry", "a"}, "リュ": {"ry", "u"}, "リョ": {"ry", "o"},
-		"ギャ": {"gy", "a"}, "ギュ": {"gy", "u"}, "ギョ": {"gy", "o"},
-		"ジャ": {"j", "a"}, "ジュ": {"j", "u"}, "ジョ": {"j", "o"},
-		"ビャ": {"by", "a"}, "ビュ": {"by", "u"}, "ビョ": {"by", "o"},
-		"ピャ": {"py", "a"}, "ピュ": {"py", "u"}, "ピョ": {"py", "o"},
-		"ファ": {"f", "a"}, "フィ": {"f", "i"}, "フェ": {"f", "e"}, "フォ": {"f", "o"}, "フュ": {"fy", "u"},
-		"ウィ": {"w", "i"}, "ウェ": {"w", "e"}, "ウォ": {"w", "o"},
-		"ヴァ": {"v", "a"}, "ヴィ": {"v", "i"}, "ヴ": {"v", "u"}, "ヴェ": {"v", "e"}, "ヴォ": {"v", "o"},
-		"ツァ": {"ts", "a"}, "ツィ": {"ts", "i"}, "ツェ": {"ts", "e"}, "ツォ": {"ts", "o"},
-		"チェ": {"ch", "e"}, "シェ": {"sh", "e"}, "ジェ": {"j", "e"},
-		"ティ": {"t", "i"}, "ディ": {"d", "i"},
-		"デュ": {"d", "u"}, "トゥ": {"t", "u"},
-
-		"ッ": {"*xtu*", "*xtu*"},
+	katakana = map[string]Mora{
+		"ア": Mora{"", "a"}, "イ": Mora{"", "i"}, "ウ": Mora{"", "u"}, "エ": Mora{"", "e"}, "オ": Mora{"", "o"},
+		"カ": Mora{"k", "a"}, "キ": Mora{"k", "i"}, "ク": Mora{"k", "u"}, "ケ": Mora{"k", "e"}, "コ": Mora{"k", "o"},
+		"サ": Mora{"s", "a"}, "シ": Mora{"sh", "i"}, "ス": Mora{"s", "u"}, "セ": Mora{"s", "e"}, "ソ": Mora{"s", "o"},
+		"タ": Mora{"t", "a"}, "チ": Mora{"ch", "i"}, "ツ": Mora{"ts", "u"}, "テ": Mora{"t", "e"}, "ト": Mora{"t", "o"},
+		"ナ": Mora{"n", "a"}, "ニ": Mora{"n", "i"}, "ヌ": Mora{"n", "u"}, "ネ": Mora{"n", "e"}, "ノ": Mora{"n", "o"},
+		"ハ": Mora{"h", "a"}, "ヒ": Mora{"h", "i"}, "フ": Mora{"f", "u"}, "ヘ": Mora{"h", "e"}, "ホ": Mora{"h", "o"},
+		"マ": Mora{"m", "a"}, "ミ": Mora{"m", "i"}, "ム": Mora{"m", "u"}, "メ": Mora{"m", "e"}, "モ": Mora{"m", "o"},
+		"ヤ": Mora{"y", "a"}, "ユ": Mora{"y", "u"}, "ヨ": Mora{"y", "o"},
+		"ラ": Mora{"r", "a"}, "リ": Mora{"r", "i"}, "ル": Mora{"r", "u"}, "レ": Mora{"r", "e"}, "ロ": Mora{"r", "o"},
+		"ワ": Mora{"w", "a"}, "ヲ": Mora{"", "o"}, "ン": Mora{"*n", "*n"},
+		"ガ": Mora{"g", "a"}, "ギ": Mora{"g", "i"}, "グ": Mora{"g", "u"}, "ゲ": Mora{"g", "e"}, "ゴ": Mora{"g", "o"},
+		"ザ": Mora{"z", "a"}, "ジ": Mora{"j", "i"}, "ズ": Mora{"z", "u"}, "ゼ": Mora{"z", "e"}, "ゾ": Mora{"z", "o"},
+		"ダ": Mora{"d", "a"}, "ヂ": Mora{"j", "i"}, "ヅ": Mora{"z", "u"}, "デ": Mora{"d", "e"}, "ド": Mora{"d", "o"},
+		"バ": Mora{"b", "a"}, "ビ": Mora{"b", "i"}, "ブ": Mora{"b", "u"}, "ベ": Mora{"b", "e"}, "ボ": Mora{"b", "o"},
+		"パ": Mora{"p", "a"}, "ピ": Mora{"p", "i"}, "プ": Mora{"p", "u"}, "ペ": Mora{"p", "e"}, "ポ": Mora{"p", "o"},
+		"キャ": Mora{"ky", "a"}, "キュ": Mora{"ky", "u"}, "キョ": Mora{"ky", "o"},
+		"シャ": Mora{"sh", "a"}, "シュ": Mora{"sh", "u"}, "ショ": Mora{"sh", "o"},
+		"チャ": Mora{"ch", "a"}, "チュ": Mora{"ch", "u"}, "チョ": Mora{"ch", "o"},
+		"ニャ": Mora{"ny", "a"}, "ニュ": Mora{"ny", "u"}, "ニョ": Mora{"ny", "o"},
+		"ヒャ": Mora{"hy", "a"}, "ヒュ": Mora{"hy", "u"}, "ヒョ": Mora{"hy", "o"},
+		"ミャ": Mora{"my", "a"}, "ミュ": Mora{"my", "u"}, "ミョ": Mora{"my", "o"},
+		"リャ": Mora{"ry", "a"}, "リュ": Mora{"ry", "u"}, "リョ": Mora{"ry", "o"},
+		"ギャ": Mora{"gy", "a"}, "ギュ": Mora{"gy", "u"}, "ギョ": Mora{"gy", "o"},
+		"ジャ": Mora{"j", "a"}, "ジュ": Mora{"j", "u"}, "ジョ": Mora{"j", "o"},
+		"ビャ": Mora{"by", "a"}, "ビュ": Mora{"by", "u"}, "ビョ": Mora{"by", "o"},
+		"ピャ": Mora{"py", "a"}, "ピュ": Mora{"py", "u"}, "ピョ": Mora{"py", "o"},
+		"ファ": Mora{"f", "a"}, "フィ": Mora{"f", "i"}, "フェ": Mora{"f", "e"}, "フォ": Mora{"f", "o"},
+		"フュ": Mora{"fy", "u"},
+		"ウィ": Mora{"w", "i"}, "ウェ": Mora{"w", "e"}, "ウォ": Mora{"w", "o"},
+		"ヴァ": Mora{"v", "a"}, "ヴィ": Mora{"v", "i"}, "ヴェ": Mora{"v", "e"}, "ヴォ": Mora{"v", "o"},
+		"ツァ": Mora{"ts", "a"}, "ツィ": Mora{"ts", "i"}, "ツェ": Mora{"ts", "e"}, "ツォ": Mora{"ts", "o"},
+		"チェ": Mora{"ch", "e"}, "シェ": Mora{"sh", "e"}, "ジェ": Mora{"j", "e"},
+		"ティ": Mora{"t", "i"}, "ディ": Mora{"d", "i"},
+		"デュ": Mora{"d", "u"}, "トゥ": Mora{"t", "u"},
+		"ッ": Mora{"*xtu", "*xtu"},
 	}
 )
 
-func parseToMora(s string) ([][]string, bool) {
-	runes := []rune(s + "$")
-	length := len(runes)
-	ans := make([][]string, 0, length)
-	for i := 0; i < length-1; i++ {
-		if v, ok := mora[string(runes[i:i+2])]; ok {
-			ans = append(ans, v)
+type Mora struct {
+	Consonant string
+	Vowel     string
+}
+
+type MoraWeightCell struct {
+	Consonant float64
+	Vowel     float64
+}
+
+type MoraWeight struct {
+	Cells []MoraWeightCell
+	Max   float64
+}
+
+func NewMoraWeight(c []MoraWeightCell) MoraWeight {
+	var sum float64
+	for _, v := range c {
+		sum += v.Consonant
+		sum += v.Vowel
+	}
+	return MoraWeight{Cells: c, Max: sum}
+}
+
+func Morae(p markov.Phrase) ([]Mora, bool) {
+	var pron string
+	var ok bool
+	if pron, ok = p.Pronounciation(); !ok {
+		return []Mora{}, false
+	}
+
+	runes := []rune(pron + "*")
+	ans := make([]Mora, 0, len(runes)-1)
+
+	for i, end := 0, len(runes)-1; i < end; i++ {
+		if mora, ok := katakana[string(runes[i:i+2])]; ok {
+			ans = append(ans, mora)
 			i++
-		} else if v, ok := mora[string(runes[i])]; ok {
-			ans = append(ans, v)
-		} else if "ー" == string(runes[i]) {
-			v := make([]string, 2)
-			copy(v, ans[len(ans)-1])
-			v[0] = ""
-			ans = append(ans, v)
+		} else if mora, ok := katakana[string(runes[i])]; ok {
+			ans = append(ans, mora)
+		} else if runes[i] == 'ー' {
+			newMora := Mora{"", ans[len(ans)-1].Vowel}
+			ans = append(ans, newMora)
 		} else {
-			return [][]string{}, false
+			return []Mora{}, false
 		}
 	}
 	return ans, true
+}
+
+func Similarity(p0, p1 markov.Phrase, w MoraWeight) float64 {
+	var morae0, morae1 []Mora
+	var ok bool
+	if morae0, ok = Morae(p0); !ok {
+		return 0.0
+	}
+	if morae1, ok = Morae(p1); !ok {
+		return 0.0
+	}
+	len0, len1, lenw := len(morae0), len(morae1), len(w.Cells)
+	lenMin := min(len0, len1, lenw)
+
+	var sum float64
+	for i := 0; i < lenMin; i++ {
+		if morae0[len0-1-i].Vowel == morae1[len1-1-i].Vowel {
+			sum += w.Cells[lenw-1-i].Vowel
+		}
+		if morae0[len0-1-i].Consonant == morae1[len1-1-i].Consonant {
+			sum += w.Cells[lenw-1-i].Consonant
+		}
+	}
+	return sum / w.Max
+}
+
+func min(x, y, z int) int {
+	if x > y {
+		if y > z {
+			return z
+		} else {
+			return y
+		}
+	} else {
+		if x > z {
+			return z
+		} else {
+			return x
+		}
+	}
 }

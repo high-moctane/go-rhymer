@@ -3,48 +3,47 @@ package rhymer
 import (
 	"reflect"
 	"testing"
+
+	"github.com/high-moctane/go-markov_chain_Japanese"
+	"github.com/shogo82148/go-mecab"
 )
 
-func TestParseToMora(t *testing.T) {
-	var expected [][]string
+func TestMorae(t *testing.T) {
+	mecab, _ := mecab.New(map[string]string{})
+	defer mecab.Destroy()
+	parsed, _ := mecab.Parse("こんにちは世界")
+	phrase := markov.MakePhraseString(parsed).Phrase()
+	morae, _ := phrase.Morae()
+	expected := []markov.Mora{{"k", "o"}, {"*n", "*n"}, {"n", "i"}, {"ch", "i"}, {"w", "a"}, {"s", "e"}, {"k", "a"}, {"", "i"}}
+	if !reflect.DeepEqual(expected, morae) {
+		t.Errorf("expected %v, but %v", expected, morae)
+	}
+}
 
-	if mora, ok := parseToMora("ポワ"); ok {
-		expected = [][]string{{"p", "o"}, {"w", "a"}}
-		if !reflect.DeepEqual(mora, expected) {
-			t.Errorf("expected %v, but %v", expected, mora)
-		}
-	} else {
-		t.Errorf("parse error.")
+func TestSimilarity(t *testing.T) {
+	var w MoraWeight
+	var p0, p1 markov.Phrase
+	mecab, _ := mecab.New(map[string]string{})
+	var parsed string
+	defer mecab.Destroy()
+	m, _ := markov.New(1, map[string]string{})
+	defer m.Destroy()
+
+	parsed, _ = mecab.Parse("こんにちは")
+	p0 = markov.MakePhraseString(parsed).Phrase()
+	parsed, _ = mecab.Parse("こんにちは")
+	p1 = markov.MakePhraseString(parsed).Phrase()
+	w = NewMoraWeight([]MoraWeightCell{{1.0, 10.0}, {2.0, 20.0}, {3.0, 30.0}})
+	if Similarity(p0, p1, w) != 1 {
+		t.Errorf("expected %v, but %v", 1, Similarity(p0, p1, w))
 	}
 
-	if mora, ok := parseToMora("チョコ"); ok {
-		expected = [][]string{{"ch", "o"}, {"k", "o"}}
-		if !reflect.DeepEqual(mora, expected) {
-			t.Errorf("expected %v, but %v", expected, mora)
-		}
-	} else {
-		t.Errorf("parse error.")
-	}
-
-	if mora, ok := parseToMora("ポワー"); ok {
-		expected = [][]string{{"p", "o"}, {"w", "a"}, {"", "a"}}
-		if !reflect.DeepEqual(mora, expected) {
-			t.Errorf("expected %v, but %v", expected, mora)
-		}
-	} else {
-		t.Errorf("parse error.")
-	}
-
-	if mora, ok := parseToMora("ジュース"); ok {
-		expected = [][]string{{"j", "u"}, {"", "u"}, {"s", "u"}}
-		if !reflect.DeepEqual(mora, expected) {
-			t.Errorf("expected %v, but %v", expected, mora)
-		}
-	} else {
-		t.Errorf("parse error.")
-	}
-
-	if _, ok := parseToMora("ポワpowa"); ok {
-		t.Errorf("parse error.")
+	parsed, _ = mecab.Parse("こんにちは")
+	p0 = markov.MakePhraseString(parsed).Phrase()
+	parsed, _ = mecab.Parse("魚市場")
+	p1 = markov.MakePhraseString(parsed).Phrase()
+	w = NewMoraWeight([]MoraWeightCell{{1.0, 10.0}, {2.0, 20.0}, {3.0, 30.0}})
+	if Similarity(p0, p1, w) != 0.9393939393939394 {
+		t.Errorf("expected %v, but %v", 0.9393939393939394, Similarity(p0, p1, w))
 	}
 }

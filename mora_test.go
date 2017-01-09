@@ -13,8 +13,8 @@ func TestMorae(t *testing.T) {
 	defer mecab.Destroy()
 	parsed, _ := mecab.Parse("こんにちは世界")
 	phrase := markov.MakePhraseString(parsed).Phrase()
-	morae, _ := phrase.Morae()
-	expected := []markov.Mora{{"k", "o"}, {"*n", "*n"}, {"n", "i"}, {"ch", "i"}, {"w", "a"}, {"s", "e"}, {"k", "a"}, {"", "i"}}
+	morae, _ := Morae(phrase)
+	expected := []Mora{{"k", "o"}, {"*n", "*n"}, {"n", "i"}, {"ch", "i"}, {"w", "a"}, {"s", "e"}, {"k", "a"}, {"", "i"}}
 	if !reflect.DeepEqual(expected, morae) {
 		t.Errorf("expected %v, but %v", expected, morae)
 	}

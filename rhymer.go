@@ -1,7 +1,6 @@
 package rhymer
 
 import (
-	"reflect"
 	"runtime"
 
 	markov "github.com/high-moctane/go-markov_chain_Japanese"
@@ -10,23 +9,23 @@ import (
 type Rhymer struct {
 	Markov     *markov.Markov
 	Weight     *MoraWeight
-	MaxLen     int
-	MaxPhrase  int
 	Similarity float64
+	Morphemes  int
 }
 
-func New(m *markov.Markov, w *MoraWeight, max int, maxp int, sim float64) Rhymer {
-	return Rhymer{Markov: m, Weight: w, MaxLen: max, MaxPhrase: maxp, Similarity: sim}
-}
-
-func endCondition(m markov.Morpheme) bool {
+func endCondition(_ markov.Morpheme) bool {
 	return false
+}
+
+func New(m *markov.Markov, w *MoraWeight, s float64, mo int) Rhymer {
+	return Rhymer{Markov: m, Weight: w, Similarity: s, Morphemes: mo}
 }
 
 func (r *Rhymer) isRhyme(p0, p1 markov.Phrase) bool {
 	if Similarity(p0, p1, *r.Weight) < r.Similarity {
 		return false
 	}
+
 	for _, v := range []string{"助詞", "形容詞", "動詞", "助動詞", "記号", "感動詞", "連体詞", "副詞", "接頭詞"} {
 		if p0[len(p0)-1].PartOfSpeech == v {
 			return false
@@ -45,17 +44,13 @@ func (r *Rhymer) isRhyme(p0, p1 markov.Phrase) bool {
 		}
 	}
 
-	// if reflect.DeepEqual(p0[len(p0)-1], p1[len(p1)-1]) {
-	// return false
-	// }
-
 	return true
 }
 
-func isDup(ph []markov.Phrase) bool {
+func (r *Rhymer) isDup(ph []markov.Phrase) bool {
 	for i := 0; i < len(ph)-1; i++ {
 		for j := i + 1; j < len(ph); j++ {
-			if reflect.DeepEqual(ph[i][len(ph[i])-1], ph[j][len(ph[j])-1]) {
+			if ph[i][len(ph[i])-1].OriginalForm == ph[j][len(ph[j])-1].OriginalForm {
 				return true
 			}
 		}
@@ -63,45 +58,66 @@ func isDup(ph []markov.Phrase) bool {
 	return false
 }
 
-func (r *Rhymer) TryGenerate() ([]markov.Phrase, bool) {
-	ph := make([]markov.Phrase, r.MaxPhrase)
-	ans := make([]markov.Phrase, 0, r.MaxPhrase)
-	for i, _ := range ph {
-		ph[i] = r.Markov.Generate(r.MaxLen, endCondition)
+func (r *Rhymer) GeneratePair() []markov.Phrase {
+	buf := make([]markov.Phrase, 2)
+	shift := func() {
+		buf[1] = buf[0]
+		buf[0] = r.Markov.Generate(r.Morphemes, endCondition)
 	}
-	ans = append(ans, ph[0])
-	for i := 1; i < len(ph); i++ {
-		if r.isRhyme(ph[0], ph[i]) {
-			ans = append(ans, ph[i])
-		}
-	}
-	if len(ans) <= 1 {
-		return []markov.Phrase{}, false
-	}
-	if isDup(ans) {
-		return []markov.Phrase{}, false
-	}
-	return ans, true
-}
+	shift()
 
-func (r *Rhymer) Generate() []markov.Phrase {
 	for {
-		if ph, ok := r.TryGenerate(); ok {
-			return ph
+		shift()
+		if r.isRhyme(buf[0], buf[1]) && !r.isDup(buf) {
+			return buf
 		}
-		runtime.Gosched()
 	}
 }
 
-func (r *Rhymer) Stream() <-chan []markov.Phrase {
-	ch := make(chan []markov.Phrase, 1+runtime.NumCPU())
-	for i := 0; i < runtime.NumCPU()+1; i++ {
+func (r *Rhymer) GenerateFromPhrase(l int, p markov.Phrase) []markov.Phrase {
+	for {
+		ans := make([]markov.Phrase, 1, l+1)
+		ans[0] = p
+		for len(ans) < l+1 {
+			for {
+				ph := r.Markov.Generate(r.Morphemes, endCondition)
+				if r.isRhyme(ph, ans[len(ans)-1]) {
+					ans = append(ans, ph)
+					break
+				}
+			}
+		}
+
+		if !r.isDup(ans) {
+			return ans[1:]
+		}
+	}
+}
+
+func (r *Rhymer) GenerateFromKana(l int, s string) []markov.Phrase {
+	p := markov.Phrase{{Pronounciation: s}}
+	return r.GenerateFromPhrase(l, p)
+}
+
+func (r *Rhymer) Generate(l int) []markov.Phrase {
+	pair := r.GeneratePair()
+	return append(pair, r.GenerateFromPhrase(l-2, pair[1])...)
+}
+
+func (r *Rhymer) Stream(l int) (<-chan []markov.Phrase, chan<- bool) {
+	kill := make(chan bool, 1)
+	ans := make(chan []markov.Phrase, 1)
+	for i := 0; i < runtime.NumCPU(); i++ {
 		go func() {
 			for {
-				ch <- r.Generate()
-				runtime.Gosched()
+				select {
+				case <-kill:
+					return
+				default:
+					ans <- r.Generate(l)
+				}
 			}
 		}()
 	}
-	return (<-chan []markov.Phrase)(ch)
+	return (<-chan []markov.Phrase)(ans), (chan<- bool)(kill)
 }

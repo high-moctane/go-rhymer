@@ -1,6 +1,6 @@
 package rhymer
 
-import markov "github.com/high-moctane/go-markov_chain_Japanese"
+import "github.com/high-moctane/go-mecab_slice"
 
 var (
 	katakana = map[string]Mora{
@@ -66,7 +66,7 @@ func NewMoraWeight(c []MoraWeightCell) MoraWeight {
 	return MoraWeight{Cells: c, Max: sum}
 }
 
-func Morae(p markov.Phrase) ([]Mora, bool) {
+func Morae(p mecabs.Phrase) ([]Mora, bool) {
 	var pron string
 	var ok bool
 	if pron, ok = p.Pronounciation(); !ok {
@@ -92,7 +92,7 @@ func Morae(p markov.Phrase) ([]Mora, bool) {
 	return ans, true
 }
 
-func Similarity(p0, p1 markov.Phrase, w MoraWeight) float64 {
+func Similarity(p0, p1 mecabs.Phrase, w MoraWeight) float64 {
 	var morae0, morae1 []Mora
 	var ok bool
 	if morae0, ok = Morae(p0); !ok {

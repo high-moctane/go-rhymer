@@ -3,7 +3,8 @@ package rhymer
 import (
 	"runtime"
 
-	markov "github.com/high-moctane/go-markov_chain_Japanese"
+	"github.com/high-moctane/go-markov_chain_Japanese"
+	"github.com/high-moctane/go-mecab_slice"
 )
 
 type Rhymer struct {
@@ -13,15 +14,11 @@ type Rhymer struct {
 	Morphemes  int
 }
 
-func endCondition(_ markov.Morpheme) bool {
-	return false
-}
-
 func New(m *markov.Markov, w *MoraWeight, s float64, mo int) Rhymer {
 	return Rhymer{Markov: m, Weight: w, Similarity: s, Morphemes: mo}
 }
 
-func (r *Rhymer) isRhyme(p0, p1 markov.Phrase) bool {
+func (r *Rhymer) isRhyme(p0, p1 mecabs.Phrase) bool {
 	if Similarity(p0, p1, *r.Weight) < r.Similarity {
 		return false
 	}
@@ -47,7 +44,7 @@ func (r *Rhymer) isRhyme(p0, p1 markov.Phrase) bool {
 	return true
 }
 
-func (r *Rhymer) isDup(ph []markov.Phrase) bool {
+func (r *Rhymer) isDup(ph []mecabs.Phrase) bool {
 	for i := 0; i < len(ph)-1; i++ {
 		for j := i + 1; j < len(ph); j++ {
 			if ph[i][len(ph[i])-1].OriginalForm == ph[j][len(ph[j])-1].OriginalForm {
@@ -58,11 +55,11 @@ func (r *Rhymer) isDup(ph []markov.Phrase) bool {
 	return false
 }
 
-func (r *Rhymer) GeneratePair() []markov.Phrase {
-	buf := make([]markov.Phrase, 2)
+func (r *Rhymer) GeneratePair() []mecabs.Phrase {
+	buf := make([]mecabs.Phrase, 2)
 	shift := func() {
 		buf[1] = buf[0]
-		buf[0] = r.Markov.Generate(r.Morphemes, endCondition)
+		buf[0] = r.Markov.Generate(r.Morphemes)
 	}
 	shift()
 
@@ -74,13 +71,13 @@ func (r *Rhymer) GeneratePair() []markov.Phrase {
 	}
 }
 
-func (r *Rhymer) GenerateFromPhrase(l int, p markov.Phrase) []markov.Phrase {
+func (r *Rhymer) GenerateFromPhrase(l int, p mecabs.Phrase) []mecabs.Phrase {
 	for {
-		ans := make([]markov.Phrase, 1, l+1)
+		ans := make([]mecabs.Phrase, 1, l+1)
 		ans[0] = p
 		for len(ans) < l+1 {
 			for {
-				ph := r.Markov.Generate(r.Morphemes, endCondition)
+				ph := r.Markov.Generate(r.Morphemes)
 				if r.isRhyme(ph, ans[len(ans)-1]) {
 					ans = append(ans, ph)
 					break
@@ -94,19 +91,19 @@ func (r *Rhymer) GenerateFromPhrase(l int, p markov.Phrase) []markov.Phrase {
 	}
 }
 
-func (r *Rhymer) GenerateFromKana(l int, s string) []markov.Phrase {
-	p := markov.Phrase{{Pronounciation: s}}
+func (r *Rhymer) GenerateFromKana(l int, s string) []mecabs.Phrase {
+	p := mecabs.Phrase{{Pronounciation: s}}
 	return r.GenerateFromPhrase(l, p)
 }
 
-func (r *Rhymer) Generate(l int) []markov.Phrase {
+func (r *Rhymer) Generate(l int) []mecabs.Phrase {
 	pair := r.GeneratePair()
 	return append(pair, r.GenerateFromPhrase(l-2, pair[1])...)
 }
 
-func (r *Rhymer) Stream(l int) (<-chan []markov.Phrase, chan<- bool) {
+func (r *Rhymer) Stream(l int) (<-chan []mecabs.Phrase, chan<- bool) {
 	kill := make(chan bool, 1)
-	ans := make(chan []markov.Phrase, 1)
+	ans := make(chan []mecabs.Phrase, 1)
 	for i := 0; i < runtime.NumCPU(); i++ {
 		go func() {
 			for {
@@ -119,5 +116,5 @@ func (r *Rhymer) Stream(l int) (<-chan []markov.Phrase, chan<- bool) {
 			}
 		}()
 	}
-	return (<-chan []markov.Phrase)(ans), (chan<- bool)(kill)
+	return (<-chan []mecabs.Phrase)(ans), (chan<- bool)(kill)
 }

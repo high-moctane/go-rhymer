@@ -19,6 +19,9 @@ func New(m *markov.Markov, w *MoraWeight, s float64, mo int) Rhymer {
 }
 
 func (r *Rhymer) isRhyme(p0, p1 mecabs.Phrase) bool {
+	if len(p0) <= 0 || len(p1) <= 0 {
+		return false
+	}
 	if Similarity(p0, p1, *r.Weight) < r.Similarity {
 		return false
 	}
@@ -44,13 +47,28 @@ func (r *Rhymer) isRhyme(p0, p1 mecabs.Phrase) bool {
 	return true
 }
 
+// func (r *Rhymer) isDup(ph []mecabs.Phrase) bool {
+// for i := 0; i < len(ph)-1; i++ {
+// for j := i + 1; j < len(ph); j++ {
+// if ph[i][len(ph[i])-1].OriginalForm == ph[j][len(ph[j])-1].OriginalForm {
+// return true
+// }
+// }
+// }
+// return false
+// }
+
 func (r *Rhymer) isDup(ph []mecabs.Phrase) bool {
-	for i := 0; i < len(ph)-1; i++ {
-		for j := i + 1; j < len(ph); j++ {
-			if ph[i][len(ph[i])-1].OriginalForm == ph[j][len(ph[j])-1].OriginalForm {
+	origForms := make([]string, 0, len(ph))
+	origForms = append(origForms, ph[0][len(ph[0])-1].OriginalForm)
+	for i := 1; i < len(ph); i++ {
+		orig := ph[i][len(ph[i])-1].OriginalForm
+		for j := 0; j < len(origForms); j++ {
+			if orig == origForms[j] {
 				return true
 			}
 		}
+		origForms = append(origForms, orig)
 	}
 	return false
 }
@@ -91,6 +109,33 @@ func (r *Rhymer) GenerateFromPhrase(l int, p mecabs.Phrase) []mecabs.Phrase {
 	}
 }
 
+func appendable(ps []mecabs.Phrase, newp mecabs.Phrase) bool {
+	orig := newp[len(newp)-1].OriginalForm
+	for _, p := range ps {
+		if orig == p[len(p)-1].OriginalForm {
+			return false
+		}
+	}
+	return true
+}
+
+// TODO:
+//		GenerateFromPhrases() を使った実装にする
+func (r *Rhymer) GenerateFromPhrases(l int, ps []mecabs.Phrase) []mecabs.Phrase {
+	ans := make([]mecabs.Phrase, 0, l+len(ps))
+	for _, p := range ps {
+		ans = append(ans, p)
+	}
+
+	for len(ans) < len(ps)+l {
+		ph := r.Markov.Generate(r.Morphemes)
+		if r.isRhyme(ans[len(ans)-1], ph) && appendable(ans, ph) {
+			ans = append(ans, ph)
+		}
+	}
+	return ans[len(ps):]
+}
+
 func (r *Rhymer) GenerateFromKana(l int, s string) []mecabs.Phrase {
 	p := mecabs.Phrase{{Pronounciation: s}}
 	return r.GenerateFromPhrase(l, p)
@@ -98,7 +143,8 @@ func (r *Rhymer) GenerateFromKana(l int, s string) []mecabs.Phrase {
 
 func (r *Rhymer) Generate(l int) []mecabs.Phrase {
 	pair := r.GeneratePair()
-	return append(pair, r.GenerateFromPhrase(l-2, pair[1])...)
+	// return append(pair, r.GenerateFromPhrase(l-2, pair[1])...)
+	return append(pair, r.GenerateFromPhrases(l-2, pair)...)
 }
 
 func (r *Rhymer) Stream(l int) (<-chan []mecabs.Phrase, chan<- bool) {

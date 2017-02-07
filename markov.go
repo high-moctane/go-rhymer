@@ -9,11 +9,11 @@ import (
 
 // Markov はマルコフ連鎖を行うための構造体です。
 type Markov struct {
-	Chain      []*Cell // 小マルコフグラフつなげたものです。
-	SliceLen   int     // Chain の List の最大長さです。
-	CellSize   int     // 各 Cell に格納する文の最大個数です。
-	MoraWeight MoraWeight
-	Threshold  float64
+	Chain      []*Cell    // 小マルコフグラフつなげたものです。
+	SliceLen   int        // Chain の List の最大長さです。
+	CellSize   int        // 各 Cell に格納する文の最大個数です。
+	MoraWeight MoraWeight // 韻を判定するときの重み付けです。
+	Threshold  float64    // 韻を判定するときのしきい値です。
 	rw         *sync.RWMutex
 }
 
@@ -60,12 +60,13 @@ func (c *Cell) Add(phrase mecabs.Phrase) {
 }
 
 //  NewMarkov は初期化された Markov を返します。
-func NewMarkov(sliceLen, cellSize int, weight MoraWeight) Markov {
+func NewMarkov(sliceLen, cellSize int, weight MoraWeight, thresh float64) Markov {
 	return Markov{
 		Chain:      []*Cell{NewCell(cellSize)},
 		SliceLen:   sliceLen,
 		CellSize:   cellSize,
 		MoraWeight: weight,
+		Threshold:  thresh,
 		rw:         new(sync.RWMutex),
 	}
 }
@@ -117,15 +118,15 @@ func (m *Markov) RandMorphs() []*mecabs.Morpheme {
 
 func (m *Markov) RhymingMorphs(l int) []*mecabs.Morpheme {
 	ans := make([]*mecabs.Morpheme, 0, l)
-	for morphs := m.RandMorphs(); len(ans) < l || len(morphs) > 1; morphs := morphs[1:] {
+	for morphs := m.RandMorphs(); len(ans) < l || len(morphs) > 1; morphs = morphs[1:] {
 		for i := 1; i < len(morphs); i++ {
-			if Similarity(mecabs.Phrase{morphs[0]}, mecabs.Phrase{morphs[1]}, m.MoraWeight) < m.Threshold {
+			if m.MoraWeight.Similarity(mecabs.Phrase{*morphs[0]}, mecabs.Phrase{*morphs[1]}) < m.Threshold {
 				continue
 			}
 			if len(ans) < 1 {
-				ans := append(ans, morphs[0])
+				ans = append(ans, morphs[0])
 			}
-			ans := append(morphs[i])
+			ans = append(ans, morphs[i])
 			morphs[1], morphs[i] = morphs[i], morphs[1]
 		}
 	}

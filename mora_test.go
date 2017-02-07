@@ -13,7 +13,7 @@ func TestMorae(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer mecabs.Destroy()
-	phrase, err := mecabs.NewPhrase("こんにちは")
+	phrase, err := mecabs.ParseToPhrase("こんにちは")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,27 +33,27 @@ func TestSimilarity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p0, err = mecabs.NewPhrase("こんにちは")
+	p0, err = mecabs.ParseToPhrase("こんにちは")
 	if err != nil {
 		t.Fatal(err)
 	}
-	p1, err = mecabs.NewPhrase("こんにちは")
+	p1, err = mecabs.ParseToPhrase("こんにちは")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if Similarity(p0, p1, w) != 1 {
+	if w.Similarity(p0, p1) != 1 {
 		t.Errorf("expected %v, but %v", 1, Similarity(p0, p1, w))
 	}
 
-	p0, err = mecabs.NewPhrase("こんにちは")
+	p0, err = mecabs.ParseToPhrase("こんにちは")
 	if err != nil {
 		t.Fatal(err)
 	}
-	p1, err = mecabs.NewPhrase("魚市場")
+	p1, err = mecabs.ParseToPhrase("魚市場")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if Similarity(p0, p1, w) != 0.9393939393939394 {
+	if w.Similarity(p0, p1) != 0.9393939393939394 {
 		t.Errorf("expected %v, but %v", 0.9393939393939394, Similarity(p0, p1, w))
 	}
 }

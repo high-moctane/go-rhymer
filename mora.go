@@ -2,6 +2,7 @@ package rhymer
 
 import "github.com/high-moctane/go-mecab_slice"
 
+// カタカナと Mora の対応を保存したものです。
 var (
 	katakana = map[string]Mora{
 		"ア": Mora{"", "a"}, "イ": Mora{"", "i"}, "ウ": Mora{"", "u"}, "エ": Mora{"", "e"}, "オ": Mora{"", "o"},
@@ -42,21 +43,25 @@ var (
 	}
 )
 
+// 発音情報を表す構造体です。
 type Mora struct {
 	Consonant string
 	Vowel     string
 }
 
+// Mora の距離を比較するための重み付けをする構造体です。
 type MoraWeightCell struct {
 	Consonant float64
 	Vowel     float64
 }
 
+// Mora 列の距離を比較するための重み付けをする構造体です。
 type MoraWeight struct {
 	Cells []MoraWeightCell
 	Max   float64
 }
 
+// c をもとに MoraWeight を初期化して生成します。
 func NewMoraWeight(c []MoraWeightCell) MoraWeight {
 	var sum float64
 	for _, v := range c {
@@ -66,6 +71,9 @@ func NewMoraWeight(c []MoraWeightCell) MoraWeight {
 	return MoraWeight{Cells: c, Max: sum}
 }
 
+// mecabs.Phrase を Mora 列に変換します
+// Phrase 内に発音が定義されていない Morpheme が存在する場合、
+// bool が false になります。
 func Morae(p mecabs.Phrase) ([]Mora, bool) {
 	var pron string
 	var ok bool
@@ -92,7 +100,8 @@ func Morae(p mecabs.Phrase) ([]Mora, bool) {
 	return ans, true
 }
 
-func Similarity(p0, p1 mecabs.Phrase, w MoraWeight) float64 {
+// p0, p1 の発音の類似度を返します。
+func (w *MoraWeight) Similarity(p0, p1 mecabs.Phrase) float64 {
 	var morae0, morae1 []Mora
 	var ok bool
 	if morae0, ok = Morae(p0); !ok {

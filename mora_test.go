@@ -42,7 +42,7 @@ func TestSimilarity(t *testing.T) {
 		t.Fatal(err)
 	}
 	if w.Similarity(p0, p1) != 1 {
-		t.Errorf("expected %v, but %v", 1, Similarity(p0, p1, w))
+		t.Errorf("expected %v, but %v", 1, w.Similarity(p0, p1))
 	}
 
 	p0, err = mecabs.ParseToPhrase("こんにちは")
@@ -54,6 +54,6 @@ func TestSimilarity(t *testing.T) {
 		t.Fatal(err)
 	}
 	if w.Similarity(p0, p1) != 0.9393939393939394 {
-		t.Errorf("expected %v, but %v", 0.9393939393939394, Similarity(p0, p1, w))
+		t.Errorf("expected %v, but %v", 0.9393939393939394, w.Similarity(p0, p1))
 	}
 }

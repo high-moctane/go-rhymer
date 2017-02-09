@@ -70,6 +70,7 @@ func (c *Cell) Add(phrase mecabs.Phrase) {
 	c.Count++
 }
 
+// NewMarkov は初期化された Markov を返します。
 func NewMarkov(cellCount, cellSize int) Markov {
 	return Markov{
 		Chain:     []*Cell{NewCell(cellSize)},
@@ -79,6 +80,7 @@ func NewMarkov(cellCount, cellSize int) Markov {
 	}
 }
 
+// Add は Markov に Phrase を追加します。
 func (m *Markov) Add(phrase mecabs.Phrase) {
 	// Cell の更新が必要な場合
 	if m.Chain[len(m.Chain)-1].Count >= m.CellSize {
@@ -90,4 +92,39 @@ func (m *Markov) Add(phrase mecabs.Phrase) {
 		m.Chain = append(m.Chain, NewCell(m.CellSize))
 	}
 	m.Chain[len(m.Chain)-1].Add(phrase)
+}
+
+// Morphs は Markov に格納されたすべての Morpheme のポインタを返します。
+// 重複を許しません。
+func (m *Markov) Morphs() []*mecabs.Morpheme {
+	set := make(map[mecabs.Morpheme]*mecabs.Morpheme)
+	for _, cell := range m.Chain {
+		for morph, p := range cell.Morphs {
+			set[morph] = p
+		}
+	}
+	ans := make([]*mecabs.Morpheme, 0, len(set))
+	for _, p := range set {
+		ans = append(ans, p)
+	}
+	return ans
+}
+
+// Next は morph の次にくる可能性のある Morpheme のスライスを返します。
+func (m *Markov) Next(morph *mecabs.Morpheme) []*mecabs.Morpheme {
+	set := make(map[mecabs.Morpheme]*mecabs.Morpheme)
+	for _, cell := range m.Chain {
+		candidates, ok := cell.Chain[cell.Pointer(morph)]
+		if !ok {
+			continue
+		}
+		for mo := range candidates {
+			set[*mo] = mo
+		}
+	}
+	ans := make([]*mecabs.Morpheme, 0, len(set))
+	for _, p := range set {
+		ans = append(ans, p)
+	}
+	return ans
 }

@@ -101,7 +101,6 @@ func (m *Markov) Add(phrase mecabs.Phrase) {
 // 重複を許しません。
 func (m *Markov) Morphs() []*mecabs.Morpheme {
 	set := make(map[mecabs.Morpheme]*mecabs.Morpheme)
-	ans := make([]*mecabs.Morpheme, 0, len(set))
 
 	m.rw.RLock()
 	defer m.rw.RUnlock()
@@ -111,6 +110,7 @@ func (m *Markov) Morphs() []*mecabs.Morpheme {
 			set[morph] = p
 		}
 	}
+	ans := make([]*mecabs.Morpheme, 0, len(set))
 	for _, p := range set {
 		ans = append(ans, p)
 	}
@@ -120,7 +120,6 @@ func (m *Markov) Morphs() []*mecabs.Morpheme {
 // Next は morph の次にくる可能性のある Morpheme のスライスを返します。
 func (m *Markov) Next(morph *mecabs.Morpheme) []*mecabs.Morpheme {
 	set := make(map[mecabs.Morpheme]*mecabs.Morpheme)
-	ans := make([]*mecabs.Morpheme, 0, len(set))
 
 	m.rw.RLock()
 	defer m.rw.RUnlock()
@@ -134,6 +133,30 @@ func (m *Markov) Next(morph *mecabs.Morpheme) []*mecabs.Morpheme {
 			set[*mo] = mo
 		}
 	}
+	ans := make([]*mecabs.Morpheme, 0, len(set))
+	for _, p := range set {
+		ans = append(ans, p)
+	}
+	return ans
+}
+
+// Terminals は終了ノードとなりうる Morpheme を集めたスライスを返します。
+func (m *Markov) Terminals() []*mecabs.Morpheme {
+	set := make(map[mecabs.Morpheme]*mecabs.Morpheme)
+
+	m.rw.RLock()
+	defer m.rw.RUnlock()
+
+	for _, cell := range m.Chain {
+		for initial, terminals := range cell.Chain {
+			for terminal := range terminals {
+				if *terminal == mecabs.BOS {
+					set[*initial] = cell.Pointer(initial)
+				}
+			}
+		}
+	}
+	ans := make([]*mecabs.Morpheme, 0, len(set))
 	for _, p := range set {
 		ans = append(ans, p)
 	}
